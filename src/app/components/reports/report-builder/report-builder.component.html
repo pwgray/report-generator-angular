@@ -1,0 +1,695 @@
+<div class="flex flex-col h-[calc(100vh-100px)]">
+  <!-- Header -->
+  <div class="flex justify-between items-start mb-6 border-b pb-4">
+    <div class="flex-1 mr-4">
+      <input 
+        [(ngModel)]="config.name"
+        placeholder="Report Name"
+        class="text-2xl font-bold bg-transparent border-none focus:ring-0 placeholder-gray-400 w-full p-0"
+      />
+      <p class="text-sm text-gray-500 mt-1">Configure your data and visualization</p>
+    </div>
+    <div class="flex items-center space-x-3">
+      <!-- Visibility Toggle -->
+      <div class="flex items-center bg-gray-100 rounded-md p-1">
+        <button 
+          (click)="config.visibility = 'private'"
+          [class.bg-white]="config.visibility === 'private'"
+          [class.shadow-sm]="config.visibility === 'private'"
+          [class.text-gray-900]="config.visibility === 'private'"
+          [class.font-medium]="config.visibility === 'private'"
+          [class.text-gray-500]="config.visibility !== 'private'"
+          class="flex items-center px-3 py-1.5 text-sm rounded-sm transition-colors"
+        >
+          <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+          </svg>
+          Private
+        </button>
+        <button 
+          (click)="config.visibility = 'public'"
+          [class.bg-white]="config.visibility === 'public'"
+          [class.shadow-sm]="config.visibility === 'public'"
+          [class.text-gray-900]="config.visibility === 'public'"
+          [class.font-medium]="config.visibility === 'public'"
+          [class.text-gray-500]="config.visibility !== 'public'"
+          class="flex items-center px-3 py-1.5 text-sm rounded-sm transition-colors"
+        >
+          <svg class="w-3 h-3 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Public
+        </button>
+      </div>
+      <div class="h-6 w-px bg-gray-300 mx-2"></div>
+      <app-button variant="outline" (click)="onCancel()">Cancel</app-button>
+      <app-button (click)="onSave()" [loading]="loading">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+        </svg>
+        Save Report
+      </app-button>
+    </div>
+  </div>
+
+  <div class="flex flex-1 overflow-hidden gap-6">
+    <!-- Left Sidebar: Settings -->
+    <div class="w-1/3 bg-white border border-gray-200 rounded-lg flex flex-col overflow-hidden">
+      <!-- Tab Navigation -->
+      <div class="flex border-b border-gray-200">
+        <button 
+          (click)="activeTab = 'data'"
+          [class.text-blue-600]="activeTab === 'data'"
+          [class.border-blue-600]="activeTab === 'data'"
+          [class.text-gray-500]="activeTab !== 'data'"
+          class="flex-1 py-3 text-sm font-medium border-b-2 hover:text-gray-700"
+        >
+          Data
+        </button>
+        <button 
+          (click)="activeTab = 'filter'"
+          [class.text-blue-600]="activeTab === 'filter'"
+          [class.border-blue-600]="activeTab === 'filter'"
+          [class.text-gray-500]="activeTab !== 'filter'"
+          class="flex-1 py-3 text-sm font-medium border-b-2 hover:text-gray-700"
+        >
+          Filters & Sort
+        </button>
+        <button 
+          (click)="activeTab = 'visual'"
+          [class.text-blue-600]="activeTab === 'visual'"
+          [class.border-blue-600]="activeTab === 'visual'"
+          [class.text-gray-500]="activeTab !== 'visual'"
+          class="flex-1 py-3 text-sm font-medium border-b-2 hover:text-gray-700"
+        >
+          Visualize
+        </button>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="flex-1 overflow-y-auto p-4">
+        <!-- Data Tab -->
+        @if (activeTab === 'data') {
+          <div class="space-y-6">
+            <!-- Data Source Selection -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Data Source</label>
+              <select 
+                [(ngModel)]="config.dataSourceId"
+                (ngModelChange)="onDataSourceChange($event)"
+                class="w-full text-sm border-gray-300 rounded-md"
+              >
+                <option *ngFor="let ds of dataSources" [value]="ds.id">{{ ds.name }}</option>
+              </select>
+            </div>
+
+            <!-- Tables and Views -->
+            @if (selectedDataSource) {
+              <div class="space-y-4">
+                <h3 class="font-medium text-gray-900">Available Tables & Views</h3>
+                @for (table of exposedTablesAndViews; track table.id) {
+                  <div [class.border-blue-300]="isView(table.id)" class="border rounded-md overflow-hidden">
+                    <div 
+                      [class.bg-blue-50]="isView(table.id)"
+                      [class.text-blue-900]="isView(table.id)"
+                      [class.bg-gray-50]="!isView(table.id)"
+                      [class.text-gray-700]="!isView(table.id)"
+                      class="px-3 py-2 text-sm font-semibold border-b flex items-center justify-between"
+                    >
+                      <span>{{ table.name }}</span>
+                      @if (isView(table.id)) {
+                        <span class="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded">VIEW</span>
+                      }
+                    </div>
+                    <div class="p-2 space-y-1">
+                      @for (col of table.columns; track col.id) {
+                        <label class="flex items-center space-x-2 text-sm text-gray-600 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                          <input 
+                            type="checkbox" 
+                            [checked]="isColumnSelected(table.id, col.id)"
+                            (change)="toggleColumn(table.id, col.id)"
+                            class="rounded text-blue-600 focus:ring-blue-500"
+                          />
+                          <span>{{ col.alias || col.name }}</span>
+                          <span class="text-xs text-gray-400 ml-auto">{{ col.type }}</span>
+                        </label>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Filters & Sort Tab -->
+        @if (activeTab === 'filter') {
+          <div class="space-y-6">
+            <!-- Filters Section -->
+            <div>
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="font-medium text-gray-900">Filters</h3>
+                <button 
+                  (click)="addFilter()"
+                  class="text-xs text-blue-600 hover:text-blue-700 flex items-center"
+                >
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                  Add Filter
+                </button>
+              </div>
+              <div class="space-y-3">
+                <div *ngFor="let filter of config.filters; let idx = index" class="p-3 bg-gray-50 rounded-md border border-gray-200 space-y-2">
+                    <div class="flex justify-between items-center">
+                      <span class="text-xs font-semibold text-gray-500">Filter #{{ idx + 1 }}</span>
+                      <div class="flex items-center space-x-2">
+                        <span class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                          {{ getColumnType(filter.tableId, filter.columnId) }}
+                        </span>
+                        <button 
+                          (click)="removeFilter(idx)"
+                          class="text-red-500 hover:text-red-700"
+                        >
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <!-- Column Selection -->
+                    <select 
+                      [ngModel]="filter.columnId"
+                      (ngModelChange)="updateFilter(idx, { columnId: $event })"
+                      class="w-full text-sm border-gray-300 rounded-md"
+                    >
+                      <option *ngFor="let col of getAllColumns()" [value]="col.columnId">
+                        {{ col.displayName }}
+                      </option>
+                    </select>
+                    
+                    <!-- Operator and Value -->
+                    <div class="flex space-x-2">
+                      <select 
+                        [ngModel]="filter.operator"
+                        (ngModelChange)="updateFilter(idx, { operator: $event })"
+                        class="text-sm border-gray-300 rounded-md flex-1">
+                        <option *ngFor="let op of getOperatorsForType(getColumnType(filter.tableId, filter.columnId))" [value]="op.value">{{ op.label }}</option>
+                      </select>
+                      
+                      <!-- Value Input -->
+                      <ng-container *ngIf="needsValueInput(filter.operator)">
+                        @let colType = getColumnType(filter.tableId, filter.columnId);
+                        <input 
+                          *ngIf="colType === 'date'"
+                          type="date"
+                          [ngModel]="filter.value"
+                          (ngModelChange)="updateFilter(idx, { value: $event })"
+                          class="w-2/3 text-sm border-gray-300 rounded-md p-1"
+                        />
+                        <input 
+                          *ngIf="colType === 'number' || colType === 'currency'"
+                          type="number"
+                          [ngModel]="filter.value"
+                          (ngModelChange)="updateFilter(idx, { value: $event })"
+                          [step]="colType === 'currency' ? '0.01' : 'any'"
+                          [placeholder]="colType === 'currency' ? 'Amount...' : 'Number...'"
+                          class="w-2/3 text-sm border-gray-300 rounded-md p-1"
+                        />
+                        <select
+                          *ngIf="colType === 'boolean'"
+                          [ngModel]="filter.value"
+                          (ngModelChange)="updateFilter(idx, { value: $event })"
+                          class="w-2/3 text-sm border-gray-300 rounded-md p-1"
+                        >
+                          <option value="true">True</option>
+                          <option value="false">False</option>
+                        </select>
+                        <input 
+                          *ngIf="colType !== 'date' && colType !== 'number' && colType !== 'currency' && colType !== 'boolean'"
+                          type="text"
+                          [ngModel]="filter.value"
+                          (ngModelChange)="updateFilter(idx, { value: $event })"
+                          [placeholder]="filter.operator === 'in' ? 'value1,value2,value3...' : 'Value...'"
+                          class="w-2/3 text-sm border-gray-300 rounded-md p-1"
+                        />
+                      </ng-container>
+                    </div>
+                    
+                    <!-- Second value for BETWEEN -->
+                    <div *ngIf="needsTwoValues(filter.operator)" class="flex items-center space-x-2">
+                      <span class="text-xs text-gray-500">and</span>
+                      @let colType = getColumnType(filter.tableId, filter.columnId);
+                      <input 
+                        *ngIf="colType === 'date'"
+                        type="date"
+                        [ngModel]="filter.value2 || ''"
+                        (ngModelChange)="updateFilter(idx, { value2: $event })"
+                        class="flex-1 text-sm border-gray-300 rounded-md p-1"
+                      />
+                      <input 
+                        *ngIf="colType === 'number' || colType === 'currency'"
+                        type="number"
+                        [ngModel]="filter.value2 || ''"
+                        (ngModelChange)="updateFilter(idx, { value2: $event })"
+                        [step]="colType === 'currency' ? '0.01' : 'any'"
+                        placeholder="Upper bound..."
+                        class="flex-1 text-sm border-gray-300 rounded-md p-1"
+                      />
+                    </div>
+                </div>
+                <p *ngIf="config.filters.length === 0" class="text-sm text-gray-500 italic">No filters defined. Add filters to refine your report data.</p>
+              </div>
+            </div>
+
+            <!-- Sorting Section -->
+            <div class="border-t pt-4">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="font-medium text-gray-900">Sorting</h3>
+                <button 
+                  (click)="addSort()"
+                  class="text-xs text-blue-600 hover:text-blue-700 flex items-center"
+                >
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                  Add Sort
+                </button>
+              </div>
+              <div class="space-y-3">
+                @for (sort of config.sorts; track $index; let idx = $index) {
+                  <div class="p-3 bg-gray-50 rounded-md border border-gray-200 space-y-2">
+                    <div class="flex justify-between items-center">
+                      <span class="text-xs font-semibold text-gray-500">Sort #{{ idx + 1 }}</span>
+                      <button 
+                        (click)="removeSort(idx)"
+                        class="text-red-500 hover:text-red-700"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    <div class="space-y-2">
+                      <!-- Field Selection -->
+                      <div>
+                        <label class="text-xs text-gray-500 block mb-1">Field</label>
+                        <select 
+                          [value]="sort.columnId"
+                          (change)="updateSort(idx, { columnId: $any($event.target).value })"
+                          class="w-full text-sm border-gray-300 rounded-md"
+                        >
+                          <option *ngFor="let sc of config.selectedColumns" [value]="sc.columnId">
+                            {{ getColumnName(sc.tableId, sc.columnId) }}
+                          </option>
+                        </select>
+                      </div>
+                      
+                      <!-- Direction Selection -->
+                      <div>
+                        <label class="text-xs text-gray-500 block mb-1">Direction</label>
+                        <select 
+                          [value]="sort.direction"
+                          (change)="updateSort(idx, { direction: $any($event.target).value })"
+                          class="w-full text-sm border-gray-300 rounded-md"
+                        >
+                          <option value="asc">Ascending ↑</option>
+                          <option value="desc">Descending ↓</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                }
+                @if (config.sorts.length === 0) {
+                  <p class="text-sm text-gray-500 italic">No sorting defined. Add sort rules to order your report data.</p>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Visualize Tab -->
+        @if (activeTab === 'visual') {
+          <div class="space-y-6">
+            <!-- Column Formatting -->
+            @if (config.selectedColumns.length > 0) {
+              <div class="space-y-4">
+                <h3 class="font-medium text-gray-900 flex items-center">
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                  Column Formatting ({{ config.selectedColumns.length }})
+                </h3>
+                <div class="space-y-2">
+                  @for (col of config.selectedColumns; track col.columnId; let idx = $index) {
+                    <div class="p-3 bg-white border border-gray-200 rounded-md space-y-2">
+                      <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-900">{{ getColumnName(col.tableId, col.columnId) }}</span>
+                        <div class="flex items-center space-x-2">
+                          <span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">{{ getColumnType(col.tableId, col.columnId) }}</span>
+                          <label class="flex items-center space-x-1 text-xs text-gray-600 cursor-pointer">
+                            <input 
+                              type="checkbox"
+                              [checked]="!!col.formatting"
+                              (change)="col.formatting ? disableFormatting(col.tableId, col.columnId) : enableFormatting(col.tableId, col.columnId)"
+                              class="rounded text-blue-600"
+                            />
+                            <span>Format</span>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <!-- Date Formatting -->
+                      @if (col.formatting && getColumnType(col.tableId, col.columnId) === 'date' && col.formatting.type === 'date') {
+                        <select 
+                          [value]="getFormattingConfig(col).format"
+                          (change)="updateColumnFormatting(col.tableId, col.columnId, { type: 'date', config: { format: $any($event.target).value } })"
+                          class="w-full text-xs border-gray-300 rounded"
+                        >
+                          <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                          <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                          <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                          <option value="MMM DD, YYYY">MMM DD, YYYY</option>
+                          <option value="MMMM DD, YYYY">MMMM DD, YYYY</option>
+                          <option value="relative">Relative (e.g., "2 days ago")</option>
+                          <option value="iso">ISO 8601</option>
+                        </select>
+                      }
+                      
+                      <!-- Number Formatting -->
+                      @if (col.formatting && getColumnType(col.tableId, col.columnId) === 'number' && col.formatting.type === 'number') {
+                        <div class="grid grid-cols-2 gap-2">
+                          <div>
+                            <label class="text-xs text-gray-500">Decimals</label>
+                            <input 
+                              type="number"
+                              min="0"
+                              max="10"
+                              [value]="getFormattingConfig(col).decimalPlaces"
+                              (input)="updateColumnFormattingField(col.tableId, col.columnId, 'decimalPlaces', +$any($event.target).value)"
+                              class="w-full text-xs border-gray-300 rounded"
+                            />
+                          </div>
+                          <div class="flex items-end">
+                            <label class="flex items-center space-x-1 text-xs text-gray-600 cursor-pointer">
+                              <input 
+                                type="checkbox"
+                                [checked]="getFormattingConfig(col).thousandSeparator"
+                                (change)="updateColumnFormattingField(col.tableId, col.columnId, 'thousandSeparator', $any($event.target).checked)"
+                                class="rounded text-blue-600"
+                              />
+                              <span>Thousands</span>
+                            </label>
+                          </div>
+                          <div>
+                            <label class="text-xs text-gray-500">Prefix</label>
+                            <input 
+                              type="text"
+                              placeholder="e.g., #"
+                              [value]="getFormattingConfig(col).prefix || ''"
+                              (input)="updateColumnFormattingField(col.tableId, col.columnId, 'prefix', $any($event.target).value)"
+                              class="w-full text-xs border-gray-300 rounded"
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs text-gray-500">Suffix</label>
+                            <input 
+                              type="text"
+                              placeholder="e.g., %"
+                              [value]="getFormattingConfig(col).suffix || ''"
+                              (input)="updateColumnFormattingField(col.tableId, col.columnId, 'suffix', $any($event.target).value)"
+                              class="w-full text-xs border-gray-300 rounded"
+                            />
+                          </div>
+                        </div>
+                      }
+                      
+                      <!-- Currency Formatting -->
+                      @if (col.formatting && getColumnType(col.tableId, col.columnId) === 'currency' && col.formatting.type === 'currency') {
+                        <div class="grid grid-cols-2 gap-2">
+                          <div>
+                            <label class="text-xs text-gray-500">Symbol</label>
+                            <input 
+                              type="text"
+                              [value]="getFormattingConfig(col).symbol"
+                              (input)="updateColumnFormattingField(col.tableId, col.columnId, 'symbol', $any($event.target).value)"
+                              class="w-full text-xs border-gray-300 rounded"
+                            />
+                          </div>
+                          <div>
+                            <label class="text-xs text-gray-500">Position</label>
+                            <select 
+                              [value]="getFormattingConfig(col).symbolPosition"
+                              (change)="updateColumnFormattingField(col.tableId, col.columnId, 'symbolPosition', $any($event.target).value)"
+                              class="w-full text-xs border-gray-300 rounded"
+                            >
+                              <option value="before">Before</option>
+                              <option value="after">After</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label class="text-xs text-gray-500">Decimals</label>
+                            <input 
+                              type="number"
+                              min="0"
+                              max="10"
+                              [value]="getFormattingConfig(col).decimalPlaces"
+                              (input)="updateColumnFormattingField(col.tableId, col.columnId, 'decimalPlaces', +$any($event.target).value)"
+                              class="w-full text-xs border-gray-300 rounded"
+                            />
+                          </div>
+                          <div class="flex items-end">
+                            <label class="flex items-center space-x-1 text-xs text-gray-600 cursor-pointer">
+                              <input 
+                                type="checkbox"
+                                [checked]="getFormattingConfig(col).thousandSeparator"
+                                (change)="updateColumnFormattingField(col.tableId, col.columnId, 'thousandSeparator', $any($event.target).checked)"
+                                class="rounded text-blue-600"
+                              />
+                              <span>Thousands</span>
+                            </label>
+                          </div>
+                        </div>
+                      }
+                      
+                      <!-- Boolean Formatting -->
+                      @if (col.formatting && getColumnType(col.tableId, col.columnId) === 'boolean' && col.formatting.type === 'boolean') {
+                        <select 
+                          [value]="getFormattingConfig(col).style"
+                          (change)="updateColumnFormatting(col.tableId, col.columnId, { type: 'boolean', config: { style: $any($event.target).value } })"
+                          class="w-full text-xs border-gray-300 rounded"
+                        >
+                          <option value="true/false">true/false</option>
+                          <option value="yes/no">yes/no</option>
+                          <option value="1/0">1/0</option>
+                          <option value="✓/✗">✓/✗</option>
+                        </select>
+                      }
+                      
+                      <!-- String Formatting -->
+                      @if (col.formatting && getColumnType(col.tableId, col.columnId) === 'string' && col.formatting.type === 'string') {
+                        <select 
+                          [value]="getFormattingConfig(col).case"
+                          (change)="updateColumnFormatting(col.tableId, col.columnId, { type: 'string', config: { case: $any($event.target).value } })"
+                          class="w-full text-xs border-gray-300 rounded"
+                        >
+                          <option value="none">No Change</option>
+                          <option value="uppercase">UPPERCASE</option>
+                          <option value="lowercase">lowercase</option>
+                          <option value="capitalize">Capitalize</option>
+                        </select>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Visualization Type -->
+            <div class="border-t pt-4">
+              <h3 class="font-medium text-gray-900 mb-4">Visualization Type</h3>
+              <div class="grid grid-cols-2 gap-2">
+                <button 
+                  (click)="config.visualization = 'table'"
+                  [class.bg-blue-50]="config.visualization === 'table'"
+                  [class.border-blue-500]="config.visualization === 'table'"
+                  [class.text-blue-700]="config.visualization === 'table'"
+                  class="p-3 border rounded-md text-center hover:bg-gray-50 transition-colors"
+                >
+                  <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                  <span class="text-xs font-medium">Table</span>
+                </button>
+                <button 
+                  (click)="config.visualization = 'bar'"
+                  [class.bg-blue-50]="config.visualization === 'bar'"
+                  [class.border-blue-500]="config.visualization === 'bar'"
+                  [class.text-blue-700]="config.visualization === 'bar'"
+                  class="p-3 border rounded-md text-center hover:bg-gray-50 transition-colors"
+                >
+                  <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                  </svg>
+                  <span class="text-xs font-medium">Bar</span>
+                </button>
+                <button 
+                  (click)="config.visualization = 'line'"
+                  [class.bg-blue-50]="config.visualization === 'line'"
+                  [class.border-blue-500]="config.visualization === 'line'"
+                  [class.text-blue-700]="config.visualization === 'line'"
+                  class="p-3 border rounded-md text-center hover:bg-gray-50 transition-colors"
+                >
+                  <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                  </svg>
+                  <span class="text-xs font-medium">Line</span>
+                </button>
+                <button 
+                  (click)="config.visualization = 'pie'"
+                  [class.bg-blue-50]="config.visualization === 'pie'"
+                  [class.border-blue-500]="config.visualization === 'pie'"
+                  [class.text-blue-700]="config.visualization === 'pie'"
+                  class="p-3 border rounded-md text-center hover:bg-gray-50 transition-colors"
+                >
+                  <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+                  </svg>
+                  <span class="text-xs font-medium">Pie</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Schedule Configuration -->
+            <div class="border-t pt-4">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-medium text-gray-900">Schedule (Optional)</h3>
+                <label class="flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    [(ngModel)]="config.schedule.enabled"
+                    class="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <span class="ml-2 text-sm text-gray-600">Enable</span>
+                </label>
+              </div>
+              @if (config.schedule.enabled) {
+                <div class="space-y-3">
+                  <div>
+                    <label class="text-xs text-gray-500 block mb-1">Frequency</label>
+                    <select 
+                      [(ngModel)]="config.schedule.frequency"
+                      class="w-full text-sm border-gray-300 rounded-md"
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-xs text-gray-500 block mb-1">Time</label>
+                    <input 
+                      type="time"
+                      [(ngModel)]="config.schedule.time"
+                      class="w-full text-sm border-gray-300 rounded-md"
+                    />
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Right Panel: Preview -->
+    <div class="flex-1 bg-white border border-gray-200 rounded-lg p-6 overflow-y-auto">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Report Preview</h3>
+      
+      @if (config.selectedColumns.length === 0) {
+        <div class="flex items-center justify-center h-64 text-gray-400">
+          <div class="text-center">
+            <svg class="w-16 h-16 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p class="text-sm">Select columns to see preview</p>
+          </div>
+        </div>
+      } @else {
+        <div class="space-y-6">
+          <!-- Summary -->
+          <div class="grid grid-cols-3 gap-4">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <div class="text-xs text-blue-600 font-medium mb-1">Columns</div>
+              <div class="text-2xl font-bold text-blue-900">{{ config.selectedColumns.length }}</div>
+            </div>
+            <div class="bg-purple-50 p-4 rounded-lg">
+              <div class="text-xs text-purple-600 font-medium mb-1">Filters</div>
+              <div class="text-2xl font-bold text-purple-900">{{ config.filters.length }}</div>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg">
+              <div class="text-xs text-green-600 font-medium mb-1">Sorts</div>
+              <div class="text-2xl font-bold text-green-900">{{ config.sorts.length }}</div>
+            </div>
+          </div>
+
+          <!-- Selected Columns -->
+          <div>
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Selected Columns</h4>
+            <div class="space-y-2">
+              @for (col of config.selectedColumns; track col.columnId) {
+                <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <span class="text-sm text-gray-900">{{ getColumnName(col.tableId, col.columnId) }}</span>
+                  <app-badge [color]="'gray'">{{ getColumnType(col.tableId, col.columnId) }}</app-badge>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Active Filters -->
+          @if (config.filters.length > 0) {
+            <div>
+              <h4 class="text-sm font-semibold text-gray-700 mb-3">Active Filters</h4>
+              <div class="space-y-2">
+                @for (filter of config.filters; track filter.id) {
+                  <div class="text-xs text-gray-600 bg-purple-50 px-3 py-2 rounded border border-purple-200">
+                    <strong>{{ getColumnName(filter.tableId, filter.columnId) }}</strong> 
+                    {{ filter.operator }} 
+                    @if (needsValueInput(filter.operator)) {
+                      <em>"{{ filter.value }}"</em>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Sort Order -->
+          @if (config.sorts.length > 0) {
+            <div>
+              <h4 class="text-sm font-semibold text-gray-700 mb-3">Sort Order</h4>
+              <div class="space-y-2">
+                @for (sort of config.sorts; track $index; let idx = $index) {
+                  <div class="text-xs text-gray-600 bg-green-50 px-3 py-2 rounded border border-green-200">
+                    <strong>{{ idx + 1 }}.</strong> {{ getColumnName(sort.tableId, sort.columnId) }} 
+                    <span class="font-medium">{{ sort.direction === 'asc' ? '↑ Ascending' : '↓ Descending' }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Visualization -->
+          <div>
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Visualization</h4>
+            <app-badge [color]="'blue'" class="text-sm">{{ config.visualization }}</app-badge>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

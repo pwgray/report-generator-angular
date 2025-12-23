@@ -1,0 +1,440 @@
+<div class="space-y-6 animate-fade-in pb-10">
+  <!-- Header -->
+  <div class="flex items-center justify-between border-b pb-4">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-800">
+        {{ isEditMode ? 'Edit Data Source' : 'New Data Source' }}
+      </h2>
+      <p class="text-sm text-gray-500">Configure connection and schema metadata</p>
+    </div>
+    <div class="flex space-x-2">
+      <app-button variant="ghost" (click)="onCancel()">Cancel</app-button>
+      <app-button (click)="handleSave()" [loading]="loading">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        Save Configuration
+      </app-button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- Left Column: Basic Info & Tabs -->
+    <div class="lg:col-span-3 space-y-4">
+      <!-- General Settings Card -->
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="font-semibold text-gray-900">General Settings</h3>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input 
+              type="text" 
+              [(ngModel)]="formData.name"
+              placeholder="e.g., Sales DB"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <input 
+              type="text"
+              [(ngModel)]="formData.description"
+              placeholder="Internal use only..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Source Type</label>
+            <select 
+              [(ngModel)]="formData.type"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="postgres">PostgreSQL</option>
+              <option value="sql">Microsoft SQL</option>
+              <option value="custom">Custom / AI Generated</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <nav class="flex flex-col space-y-1">
+        <button 
+          (click)="activeTab = 'connection'"
+          [class.bg-blue-50]="activeTab === 'connection'"
+          [class.text-blue-700]="activeTab === 'connection'"
+          [class.text-gray-600]="activeTab !== 'connection'"
+          class="px-4 py-3 text-sm font-medium rounded-lg text-left flex items-center hover:bg-gray-50"
+        >
+          <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+          </svg>
+          Connection Details
+        </button>
+        <button 
+          (click)="activeTab = 'schema'"
+          [class.bg-blue-50]="activeTab === 'schema'"
+          [class.text-blue-700]="activeTab === 'schema'"
+          [class.text-gray-600]="activeTab !== 'schema'"
+          class="px-4 py-3 text-sm font-medium rounded-lg text-left flex items-center hover:bg-gray-50"
+        >
+          <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+          </svg>
+          Schema & Metadata
+          @if (allTables.length > 0) {
+            <app-badge color="blue" class="ml-auto">{{ allTables.length }}</app-badge>
+          }
+        </button>
+      </nav>
+    </div>
+
+    <!-- Right Column: Tab Content -->
+    <div class="lg:col-span-9">
+      <!-- Connection Details Tab -->
+      @if (activeTab === 'connection') {
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 h-full">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="font-semibold text-gray-900">
+              {{ formData.type === 'custom' ? 'Describe Data' : 'Database Connection' }}
+            </h3>
+          </div>
+          <div class="p-6">
+            @if (formData.type === 'custom') {
+              <div class="space-y-4 max-w-xl">
+                <p class="text-sm text-gray-500">Since you chose Custom, describe the data you want to simulate.</p>
+                <textarea 
+                  [(ngModel)]="aiPrompt"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-32 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  placeholder="e.g. HR system with employees, departments, and payroll history..."
+                ></textarea>
+              </div>
+            } @else {
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Host</label>
+                  <input 
+                    type="text"
+                    [(ngModel)]="connectionDetails.host"
+                    placeholder="localhost"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Port</label>
+                  <input 
+                    type="text"
+                    [(ngModel)]="connectionDetails.port"
+                    placeholder="5432"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Database Name</label>
+                  <input 
+                    type="text"
+                    [(ngModel)]="connectionDetails.database"
+                    placeholder="my_database"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                  <input 
+                    type="text"
+                    [(ngModel)]="connectionDetails.username"
+                    placeholder="user"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <input 
+                    type="password"
+                    [(ngModel)]="connectionDetails.password"
+                    placeholder="••••••"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            }
+
+            <div class="mt-8 border-t pt-6">
+              <app-button (click)="handleDiscoverSchema()" [loading]="isDiscovering" class="w-full md:w-auto">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                {{ formData.type === 'custom' ? 'Generate Schema' : 'Test Connection & Fetch Schema' }}
+              </app-button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Schema & Metadata Tab -->
+      @if (activeTab === 'schema') {
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 min-h-[500px]">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="font-semibold text-gray-900">Schema Definition</h3>
+            <div class="text-sm text-gray-500 mt-1">
+              {{ allTables.length }} tables, {{ allViews.length }} views discovered. Review and enrich metadata.
+            </div>
+          </div>
+          <div class="p-6 space-y-4">
+            @if (allTables.length > 0 || allViews.length > 0) {
+              <div class="space-y-4">
+                <!-- Tables -->
+                @for (table of allTables; track table.id) {
+                  <div class="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                    <!-- Table Header -->
+                    <div class="p-4 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div 
+                        class="flex items-center flex-1 cursor-pointer"
+                        (click)="toggleTable(table.id)"
+                      >
+                        @if (expandedTableId === table.id) {
+                          <svg class="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                          </svg>
+                        } @else {
+                          <svg class="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                          </svg>
+                        }
+                        <div class="flex items-center space-x-2">
+                          <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                          </svg>
+                          <span class="font-semibold text-gray-900 text-lg">{{ table.name }}</span>
+                        </div>
+                      </div>
+                      
+                      <div class="flex items-center gap-3 w-full md:w-auto">
+                        <div class="flex-1 md:w-48">
+                          <input 
+                            [(ngModel)]="table.alias"
+                            (ngModelChange)="updateTableMetadata(table.id, 'alias', $event)"
+                            (click)="$event.stopPropagation()"
+                            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500" 
+                            placeholder="Friendly Alias"
+                          />
+                        </div>
+                        <app-button 
+                          [variant]="table.exposed ? 'secondary' : 'outline'"
+                          [class.bg-green-100]="table.exposed"
+                          [class.text-green-800]="table.exposed"
+                          [class.hover:bg-green-200]="table.exposed"
+                          [class.text-gray-500]="!table.exposed"
+                          class="text-xs"
+                          (click)="$event.stopPropagation(); toggleTableExposure(table.id)"
+                        >
+                          @if (table.exposed) {
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            Exposed
+                          } @else {
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                            </svg>
+                            Hidden
+                          }
+                        </app-button>
+                      </div>
+                    </div>
+
+                    <!-- Table Body (Columns) -->
+                    @if (expandedTableId === table.id) {
+                      <div class="p-4 border-t border-gray-200">
+                        <div class="mb-4">
+                          <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Description</label>
+                          <input 
+                            [(ngModel)]="table.description"
+                            (ngModelChange)="updateTableMetadata(table.id, 'description', $event)"
+                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500" 
+                            placeholder="Description for report users..."
+                          />
+                        </div>
+
+                        <div class="overflow-x-auto">
+                          <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                              <tr>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Field Name</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-48">Alias</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-64">Description</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sample</th>
+                              </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                              @for (col of table.columns; track col.id) {
+                                <tr>
+                                  <td class="px-3 py-2 text-sm font-medium text-gray-900">{{ col.name }}</td>
+                                  <td class="px-3 py-2 text-xs text-gray-500 font-mono">{{ col.type }}</td>
+                                  <td class="px-3 py-2">
+                                    <input 
+                                      [(ngModel)]="col.alias"
+                                      (ngModelChange)="updateColumnMetadata(table.id, col.id, 'alias', $event)"
+                                      class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500" 
+                                      [placeholder]="col.name"
+                                    />
+                                  </td>
+                                  <td class="px-3 py-2">
+                                    <input 
+                                      [(ngModel)]="col.description"
+                                      (ngModelChange)="updateColumnMetadata(table.id, col.id, 'description', $event)"
+                                      class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500" 
+                                      placeholder="Description..."
+                                    />
+                                  </td>
+                                  <td class="px-3 py-2 text-xs text-gray-500 italic truncate max-w-[150px]">
+                                    <input
+                                      [(ngModel)]="col.sampleValue"
+                                      (ngModelChange)="updateColumnMetadata(table.id, col.id, 'sampleValue', $event)"
+                                      (click)="$event.stopPropagation()"
+                                      class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 italic text-xs"
+                                      placeholder="sample..."
+                                    />
+                                  </td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- Views Section -->
+                @if (allViews.length > 0) {
+                  <div class="mt-8 mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700">Views ({{ allViews.length }})</h3>
+                  </div>
+                  @for (view of allViews; track view.id) {
+                    <div class="border border-blue-200 rounded-lg overflow-hidden bg-blue-50 shadow-sm">
+                      <!-- View Header -->
+                      <div class="p-4 bg-blue-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div 
+                          class="flex items-center flex-1 cursor-pointer"
+                          (click)="toggleTable(view.id)"
+                        >
+                          @if (expandedTableId === view.id) {
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                          } @else {
+                            <svg class="w-5 h-5 text-blue-700 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                          }
+                          <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            <span class="font-semibold text-blue-900 text-lg">{{ view.name }}</span>
+                            <app-badge color="blue" class="text-xs">VIEW</app-badge>
+                          </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 w-full md:w-auto">
+                          <div class="flex-1 md:w-48">
+                            <input 
+                              [(ngModel)]="view.alias"
+                              (ngModelChange)="updateViewMetadata(view.id, 'alias', $event)"
+                              (click)="$event.stopPropagation()"
+                              class="w-full px-2 py-1 text-sm border border-blue-300 rounded bg-white focus:ring-2 focus:ring-blue-500" 
+                              placeholder="Friendly Alias"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- View Body (Columns) -->
+                      @if (expandedTableId === view.id) {
+                        <div class="p-4 border-t border-blue-200">
+                          <div class="mb-4">
+                            <label class="block text-xs font-medium text-blue-700 uppercase mb-1">Description</label>
+                            <input 
+                              [(ngModel)]="view.description"
+                              (ngModelChange)="updateViewMetadata(view.id, 'description', $event)"
+                              class="w-full px-3 py-2 text-sm border border-blue-300 rounded bg-white focus:ring-2 focus:ring-blue-500" 
+                              placeholder="Description for report users..."
+                            />
+                          </div>
+
+                          <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-blue-200">
+                              <thead class="bg-blue-50">
+                                <tr>
+                                  <th class="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase">Field Name</th>
+                                  <th class="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase">Type</th>
+                                  <th class="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase w-48">Alias</th>
+                                  <th class="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase w-64">Description</th>
+                                  <th class="px-3 py-2 text-left text-xs font-medium text-blue-700 uppercase">Sample</th>
+                                </tr>
+                              </thead>
+                              <tbody class="bg-white divide-y divide-blue-100">
+                                @for (col of view.columns; track col.id) {
+                                  <tr>
+                                    <td class="px-3 py-2 text-sm font-medium text-blue-900">{{ col.name }}</td>
+                                    <td class="px-3 py-2 text-xs text-blue-600 font-mono">{{ col.type }}</td>
+                                    <td class="px-3 py-2">
+                                      <input 
+                                        [(ngModel)]="col.alias"
+                                        (ngModelChange)="updateViewColumnMetadata(view.id, col.id, 'alias', $event)"
+                                        class="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-500" 
+                                        [placeholder]="col.name"
+                                      />
+                                    </td>
+                                    <td class="px-3 py-2">
+                                      <input 
+                                        [(ngModel)]="col.description"
+                                        (ngModelChange)="updateViewColumnMetadata(view.id, col.id, 'description', $event)"
+                                        class="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-500" 
+                                        placeholder="Description..."
+                                      />
+                                    </td>
+                                    <td class="px-3 py-2 text-xs text-blue-500 italic truncate max-w-[150px]">
+                                      <input
+                                        [(ngModel)]="col.sampleValue"
+                                        (ngModelChange)="updateViewColumnMetadata(view.id, col.id, 'sampleValue', $event)"
+                                        (click)="$event.stopPropagation()"
+                                        class="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:ring-1 focus:ring-blue-500 italic text-xs"
+                                        placeholder="sample..."
+                                      />
+                                    </td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            } @else {
+              <div class="text-center py-20 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900">No Schema Defined</h3>
+                <p class="text-gray-500 mb-4">Go to the "Connection Details" tab to fetch schema information.</p>
+                <app-button variant="outline" (click)="activeTab = 'connection'">Go to Connection</app-button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
