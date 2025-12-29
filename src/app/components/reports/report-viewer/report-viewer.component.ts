@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AppStateService } from '../../../services/app-state.service';
 import { DatasourceService } from '../../../services/datasource.service';
 import { GeminiService } from '../../../services/gemini.service';
+import { ReportViewTrackingService } from '../../../services/report-view-tracking.service';
 import * as XLSX from 'xlsx';
 import { ReportConfig, FormattingConfig } from '../../../models/report.model';
 import { DataSource, ColumnType } from '../../../models/datasource.model';
@@ -34,7 +35,8 @@ export class ReportViewerComponent implements OnInit {
     private router: Router,
     private appState: AppStateService,
     private datasourceService: DatasourceService,
-    private geminiService: GeminiService
+    private geminiService: GeminiService,
+    private viewTracking: ReportViewTrackingService
   ) {}
 
   ngOnInit(): void {
@@ -81,6 +83,15 @@ export class ReportViewerComponent implements OnInit {
         this.loading = false;
         
         console.log('[ReportViewer] DataSource found:', this.dataSource?.name || 'None');
+        
+        // Track that this report was viewed (fire and forget)
+        const currentUser = this.appState.getCurrentUser();
+        if (currentUser && this.report) {
+          this.viewTracking.trackReportView(this.report.id, currentUser.id).subscribe({
+            next: () => console.log('[ReportViewer] View tracked successfully'),
+            error: (err) => console.error('[ReportViewer] Failed to track view:', err)
+          });
+        }
         
         // In a full implementation, this would fetch the actual data
         // For now, we'll show a placeholder
